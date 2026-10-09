@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#101a16">
+    <title>Painel de Atendimento | Açougue</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="dashboard">
+        <header class="topbar">
+            <a class="brand" href="#" aria-label="Painel de atendimento">
+                <span class="brand-mark" aria-hidden="true">A</span>
+                <span class="brand-copy"><strong>Atendimento</strong><small>PAINEL DE FILAS</small></span>
+            </a>
+            <div class="connection" aria-live="polite">
+                <span id="connectionDot" class="connection-dot"></span>
+                <span id="connectionLabel">Conectando ao painel</span>
+            </div>
+        </header>
+
+        <section class="content" aria-labelledby="pageTitle">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">ATENDIMENTO</p>
+                    <h1 id="pageTitle">Fila do Açougue</h1>
+                    <p class="subtitle">Acompanhe a posição atual e organize o atendimento.</p>
+                </div>
+                <span class="queue-tag"><span class="queue-tag-dot"></span> AÇOUGUE</span>
+            </div>
+
+            <section class="ticket-card" aria-label="Posição atual da fila">
+                <div class="ticket-topline"><span>POSIÇÃO ATUAL</span><span class="live-label"><i></i> AO VIVO</span></div>
+                <div id="numeroDisplay" class="ticket-number" aria-live="polite">0</div>
+                <div class="ticket-caption">senha em atendimento</div>
+                <div class="ticket-divider"></div>
+                <div class="last-action">
+                    <span class="action-icon" aria-hidden="true">↗</span>
+                    <div><span class="muted-label">ÚLTIMA AÇÃO</span><strong id="txtComando">Nenhuma</strong></div>
+                    <span class="status-label" id="txtMensagem">Aguardando controle</span>
+                </div>
+            </section>
+
+            <div class="bottom-row">
+                <div class="how-to"><span class="key-hint">A</span><span>Avançar atendimento</span><span class="hint-separator"></span><span class="key-hint key-hint-light">B</span><span>Voltar</span></div>
+                <button id="resetButton" type="button" onclick="zerarContador()"><span aria-hidden="true">↺</span> Reiniciar fila</button>
+            </div>
+            <footer>Fila selecionada: <strong>Açougue</strong><span>•</span> Mais setores poderão ser adicionados futuramente.</footer>
+        </section>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>

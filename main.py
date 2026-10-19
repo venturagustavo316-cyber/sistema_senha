@@ -1,76 +1,82 @@
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from typing import Literal
-
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="Painel de Senha Interativo")
-
-# Permite que o painel aberto como arquivo local consulte a API no navegador.
-# A API não usa cookies nem autenticação, então credenciais CORS ficam desativadas.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
-# Estado global: controle da posição da senha
 painel_estado = {
     "posicao_atual": 0,
+    "senha_atual": "A000",
+    "guiche_atual": 1,
     "mensagem": "Painel inicializado. Use o controle para navegar.",
-    "ultimo_comando": "Nenhum"
+    "ultimo_comando": "Nenhum",
 }
+
 
 class RegistroSinal(BaseModel):
     codigo: int = Field(gt=0)
     botao: Literal["A", "B"]
 
+
+class SelecaoGuiche(BaseModel):
+    guiche: int = Field(ge=1, le=5)
+
+
+def atualizar_senha():
+    painel_estado["senha_atual"] = f"A{painel_estado['posicao_atual']:03d}"
+
+
 @app.get("/status")
 def obter_status():
-    """O Frontend consulta esta rota a cada 1 segundo para atualizar a tela."""
     return painel_estado
+
 
 @app.post("/webhook-rf")
 def receber_sinal_esp32(dados: RegistroSinal):
-    """O ESP32 chama esta rota quando você clica no controle remoto."""
-    global painel_estado
-
     if dados.botao == "A":
-        # Botão A: Avança a senha para a frente
         painel_estado["posicao_atual"] += 1
+        atualizar_senha()
         painel_estado["ultimo_comando"] = "Avançar (Botão A)"
-        painel_estado["mensagem"] = f"Avançou para o dígito/posição {painel_estado['posicao_atual']}"
-        print(f"[PAINEL] Avançando. Posição atual: {painel_estado['posicao_atual']}")
-        
-    else:  # Literal valida que o botão só pode ser A ou B.
-        # Botão B: Volta a senha para trás (evitando números negativos)
-        if painel_estado["posicao_atual"] > 0:
-            painel_estado["posicao_atual"] -= 1
-            painel_estado["mensagem"] = f"Voltou para o dígito/posição {painel_estado['posicao_atual']}"
-        else:
-            painel_estado["mensagem"] = "Já está no início da senha! Não é possível voltar mais."
-            
+        painel_estado["mensagem"] = f"Senha {painel_estado['senha_atual']} chamada no guichê {painel_estado['guiche_atual']}"
+    elif painel_estado["posicao_atual"] > 0:
+        painel_estado["posicao_atual"] -= 1
+        atualizar_senha()
         painel_estado["ultimo_comando"] = "Voltar (Botão B)"
-        print(f"[PAINEL] Voltando. Posição atual: {painel_estado['posicao_atual']}")
-        
-    return {"status": "sucesso", "posicao": painel_estado["posicao_atual"]}
+        painel_estado["mensagem"] = f"Voltou para a senha {painel_estado['senha_atual']}"
+    else:
+        painel_estado["ultimo_comando"] = "Voltar (Botão B)"
+        painel_estado["mensagem"] = "A fila já está na senha inicial A000."
+    return {"status": "sucesso", "posicao": painel_estado["posicao_atual"], "senha": painel_estado["senha_atual"]}
 
-@app.post("/reset")
-def zerar_painel():
-    """Rota opcional para zerar o painel pelo frontend."""
-    global painel_estado
-    painel_estado["posicao_atual"] = 0
-    painel_estado["mensagem"] = "Painel reiniciado manualmente para a posição 0."
-    painel_estado["ultimo_comando"] = "Reset Web"
+
+@app.post("/guiche")
+def selecionar_guiche(dados: SelecaoGuiche):
+    painel_estado["guiche_atual"] = dados.guiche
+    painel_estado["mensagem"] = f"Atendimento direcionado ao guichê {dados.guiche}"
+    painel_estado["ultimo_comando"] = f"Troca para Guichê {dados.guiche}"
     return painel_estado
 
 
-# Sirva o painel pela mesma origem da API para evitar restrições de file://.
+@app.post("/reset")
+def zerar_painel():
+    painel_estado["posicao_atual"] = 0
+    atualizar_senha()
+    painel_estado["mensagem"] = "Fila reiniciada para a senha A000."
+    painel_estado["ultimo_comando"] = "Reiniciar fila"
+    return painel_estado
+
+
 app.mount("/", StaticFiles(directory=Path(__file__).parent, html=True), name="static")
 
 if __name__ == "__main__":
